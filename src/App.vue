@@ -13,7 +13,7 @@ import LabelsDialog from '@/components/dialogs/LabelsDialog.vue';
 const s = useBoardStore();
 const {
   drawer, view, searchQ, filterLabel, filterAssignee, filterOverdue,
-  labelsDialogOpen, deleteColDialog, resetConfirmOpen,
+  labelsDialogOpen, deleteColDialog, resetConfirmOpen, clearDbConfirmOpen,
 } = storeToRefs(s);
 
 function clearFilters() {
@@ -60,7 +60,18 @@ function toggleAssignee(id: string) {
               <div style="font-size:13px; font-weight:500;">Você</div>
               <div style="font-size:11px; color:#64748B;">vm@skyline.dev</div>
             </div>
-            <v-btn icon="mdi-cog-outline" variant="text" size="small" density="compact" />
+            <v-menu location="top end">
+              <template #activator="{ props }">
+                <v-btn v-bind="props" icon="mdi-cog-outline" variant="text" size="small" density="compact" />
+              </template>
+              <v-list density="compact" min-width="200">
+                <v-list-item prepend-icon="mdi-restore" title="Restaurar dados iniciais"
+                             @click="resetConfirmOpen = true" />
+                <v-divider class="my-1" />
+                <v-list-item prepend-icon="mdi-delete-sweep-outline" title="Limpar banco de dados"
+                             base-color="error" @click="clearDbConfirmOpen = true" />
+              </v-list>
+            </v-menu>
           </div>
         </div>
       </template>
@@ -252,6 +263,27 @@ function toggleAssignee(id: string) {
         <v-card-actions class="pa-4 pt-0" style="justify-content:flex-end; gap:8px;">
           <v-btn variant="text" @click="resetConfirmOpen = false">Cancelar</v-btn>
           <v-btn color="error" variant="flat" prepend-icon="mdi-restore" @click="s.resetAllData">Restaurar</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+    <v-dialog v-model="clearDbConfirmOpen" max-width="460" persistent>
+      <v-card rounded="lg">
+        <v-card-text class="pa-6">
+          <div class="d-flex align-start" style="gap:14px;">
+            <div style="width:40px; height:40px; border-radius:50%; background:#FEE2E2; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              <v-icon size="22" color="error">mdi-delete-sweep-outline</v-icon>
+            </div>
+            <div style="flex:1;">
+              <div style="font-size:16px; font-weight:600; color:#1A202C; margin-bottom:6px;">Limpar banco de dados?</div>
+              <div style="font-size:13px; color:#64748B; line-height:1.5;">
+                Todos os projetos, boards, tarefas, etiquetas, equipe e comentários serão removidos permanentemente. O app ficará em branco, sem nenhum dado.
+              </div>
+            </div>
+          </div>
+        </v-card-text>
+        <v-card-actions class="pa-4 pt-0" style="justify-content:flex-end; gap:8px;">
+          <v-btn variant="text" @click="clearDbConfirmOpen = false">Cancelar</v-btn>
+          <v-btn color="error" variant="flat" prepend-icon="mdi-delete-sweep-outline" @click="s.clearAllData">Limpar tudo</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

@@ -58,12 +58,12 @@ export const useBoardStore = defineStore('board', () => {
     if (raw) saved = JSON.parse(raw) as PersistedState;
   } catch (e) { console.warn('Falha ao restaurar estado:', e); }
 
-  const projects = reactive<Project[]>(saved?.projects?.length ? saved.projects : buildSeedProjects());
+  const projects = reactive<Project[]>(saved ? (saved.projects ?? []) : buildSeedProjects());
   const expandedProjects = reactive<Record<string, boolean>>(saved?.expandedProjects ?? { p1: true, p2: false, p3: false });
-  const activeProjectId = ref<string | null>(saved?.activeProjectId ?? 'p1');
-  const activeBoardId = ref<string | null>(saved?.activeBoardId ?? 'b1');
-  const PEOPLE = reactive<Person[]>(saved?.PEOPLE ?? SEED_PEOPLE.map((p) => ({ ...p })));
-  const LABELS = reactive<Record<string, Label>>(saved?.LABELS ?? { ...SEED_LABELS });
+  const activeProjectId = ref<string | null>(saved ? (saved.activeProjectId ?? null) : 'p1');
+  const activeBoardId = ref<string | null>(saved ? (saved.activeBoardId ?? null) : 'b1');
+  const PEOPLE = reactive<Person[]>(saved ? (saved.PEOPLE ?? []) : SEED_PEOPLE.map((p) => ({ ...p })));
+  const LABELS = reactive<Record<string, Label>>(saved ? (saved.LABELS ?? {}) : { ...SEED_LABELS });
 
   const activeProject = computed(() => projects.find((p) => p.id === activeProjectId.value) ?? projects[0]);
   const activeBoard = computed(() => activeProject.value?.boards.find((b) => b.id === activeBoardId.value) ?? activeProject.value?.boards[0]);
@@ -709,7 +709,7 @@ export const useBoardStore = defineStore('board', () => {
           ...c, id: newId,
           labels: [...(c.labels || [])],
           assignees: [...(c.assignees || [])],
-          checklist: (c.checklist || []).map((it) => ({ ...it })),
+          checklist: c.checklist?.length ? c.checklist.map((it) => ({ ...it })) : undefined,
         };
       });
     const board: Board = { id: nextId('b'), name: t, columns: newCols, cards: newCards };
@@ -839,6 +839,15 @@ export const useBoardStore = defineStore('board', () => {
     location.reload();
   }
 
+  const clearDbConfirmOpen = ref(false);
+  function clearAllData() {
+    try {
+      const empty: PersistedState = { projects: [], expandedProjects: {}, activeProjectId: null, activeBoardId: null, PEOPLE: [], LABELS: {} };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(empty));
+    } catch {}
+    location.reload();
+  }
+
   return {
     // constants
     TYPE_META, PRIORITY_META, COLUMN_PRESETS, AVATAR_COLORS, LABEL_PRESETS,
@@ -889,7 +898,8 @@ export const useBoardStore = defineStore('board', () => {
     editingProjectId, editingProjectName, beginRenameProject, commitRenameProject,
     editingBoardId, editingBoardName, beginRenameBoard, commitRenameBoard,
     toggleProject,
-    // reset
+    // reset / clear
     resetAllData, resetConfirmOpen,
+    clearAllData, clearDbConfirmOpen,
   };
 });
