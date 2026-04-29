@@ -6,11 +6,30 @@ import { usePeopleStore } from '@/stores/people';
 import type { Card } from '@/types';
 import { fmtDue } from '@/utils/date';
 
-defineProps<{ card: Card }>();
+const props = defineProps<{ card: Card }>();
 const board = useBoardStore();
 const labels = useLabelsStore();
 const people = usePeopleStore();
 const activity = useActivityStore();
+
+function onCardDragOver(e: DragEvent) {
+  e.preventDefault();
+  e.stopPropagation();
+  if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+  const isAbove = e.clientY < rect.top + rect.height / 2;
+  const colCards = board.cardsByCol[props.card.col] ?? [];
+  const i = colCards.findIndex((c) => c.id === props.card.id);
+  const beforeId = isAbove
+    ? props.card.id
+    : (colCards[i + 1]?.id ?? null);
+  board.setDragOver({ colId: props.card.col, beforeId });
+}
+function onCardDrop(e: DragEvent) {
+  e.preventDefault();
+  e.stopPropagation();
+  board.onDrop(e);
+}
 </script>
 
 <template>
@@ -19,6 +38,8 @@ const activity = useActivityStore();
     draggable="true"
     @dragstart="board.onDragStart($event, card.id)"
     @dragend="board.onDragEnd($event)"
+    @dragover="onCardDragOver"
+    @drop="onCardDrop"
     @click="board.openCard(card.id)"
   >
     <div class="priority-bar" :style="{ background: board.PRIORITY_META[card.priority].color }" />

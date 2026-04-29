@@ -1,20 +1,38 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useBoardStore } from '@/stores/board';
 import type { Column } from '@/types';
 import KanCard from './KanCard.vue';
 
-defineProps<{ col: Column }>();
+const props = defineProps<{ col: Column }>();
 const board = useBoardStore();
-const { dragOverCol, addingInCol, newCardTitle, editingCol, editingColTitle } = storeToRefs(board);
+const { addingInCol, newCardTitle, editingCol, editingColTitle, dragOverTarget } = storeToRefs(board);
+
+const isOverCol = computed(() => dragOverTarget.value?.colId === props.col.id);
+const isDropAtEnd = computed(
+  () => dragOverTarget.value?.colId === props.col.id && dragOverTarget.value?.beforeId === null,
+);
+function isDropBeforeCard(id: string): boolean {
+  return dragOverTarget.value?.colId === props.col.id && dragOverTarget.value?.beforeId === id;
+}
+
+function onColDragOver(e: DragEvent) {
+  e.preventDefault();
+  if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+  board.setDragOver({ colId: props.col.id, beforeId: null });
+}
+function onColDrop(e: DragEvent) {
+  e.preventDefault();
+  board.onDrop(e);
+}
 </script>
 
 <template>
   <div class="kan-col"
-       :class="{ 'drag-over': dragOverCol === col.id }"
-       @dragover="board.onDragOver($event, col.id)"
-       @dragleave="board.onDragLeave(col.id)"
-       @drop="board.onDrop($event, col.id)">
+       :class="{ 'drag-over': isOverCol }"
+       @dragover="onColDragOver"
+       @drop="onColDrop">
     <div class="kan-col-header">
       <span class="kan-dot" :style="{ background: col.dot, cursor: 'pointer' }" title="Mudar cor">
         <v-menu>
@@ -83,7 +101,11 @@ const { dragOverCol, addingInCol, newCardTitle, editingCol, editingColTitle } = 
         </div>
       </div>
 
-      <KanCard v-for="card in board.cardsByCol[col.id]" :key="card.id" :card="card" />
+      <template v-for="card in board.cardsByCol[col.id]" :key="card.id">
+        <div v-if="isDropBeforeCard(card.id)" class="drop-line" />
+        <KanCard :card="card" />
+      </template>
+      <div v-if="isDropAtEnd" class="drop-line" />
     </div>
 
     <button class="kan-add" @click="board.beginAdd(col.id)">

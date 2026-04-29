@@ -75,6 +75,15 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
   &::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 8px; }
 }
 
+.drop-line {
+  height: 3px;
+  margin: 4px 2px;
+  border-radius: 2px;
+  background: var(--k-primary);
+  box-shadow: 0 0 0 2px rgba(0, 137, 123, .18);
+  pointer-events: none;
+}
+
 .kan-add {
   margin: 6px 10px 12px;
   border: 1px dashed #CBD5E1;

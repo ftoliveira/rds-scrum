@@ -9,6 +9,11 @@ import { useCalendar } from '@/composables/useCalendar';
 import { useWorkspaceStore } from './workspace';
 import { useActivityStore } from './activity';
 
+export interface DropTarget {
+  colId: string;
+  beforeId: string | null;
+}
+
 export const useBoardStore = defineStore('board', () => {
   const workspace = useWorkspaceStore();
 
@@ -127,10 +132,24 @@ export const useBoardStore = defineStore('board', () => {
   }
 
   // ---- Drag & drop ----
-  const dragDrop = useDragDrop<string>((id, colId) => {
-    const c = findCard(id);
-    if (c) c.col = colId;
-  });
+  function moveCard(cardId: string, target: DropTarget) {
+    if (cardId === target.beforeId) return;
+    const board = workspace.activeBoard;
+    if (!board) return;
+    const i = board.cards.findIndex((c) => c.id === cardId);
+    if (i === -1) return;
+    const [c] = board.cards.splice(i, 1);
+    c.col = target.colId;
+    if (target.beforeId === null) {
+      board.cards.push(c);
+    } else {
+      const j = board.cards.findIndex((x) => x.id === target.beforeId);
+      if (j === -1) board.cards.push(c);
+      else board.cards.splice(j, 0, c);
+    }
+  }
+
+  const dragDrop = useDragDrop<DropTarget>((id, target) => moveCard(id, target));
 
   // ---- Calendar ----
   const calendar = useCalendar(() => visible.value);
@@ -344,12 +363,12 @@ export const useBoardStore = defineStore('board', () => {
     visible, sortedVisible, cardsByCol, totalByCol, sprintStats, overdueCount,
     dialogCardId, currentCard, openCard, closeCard, clearActiveCardDialog,
     addingInCol, newCardTitle, beginAdd, cancelAdd, commitAdd,
-    dragOverCol: dragDrop.dragOverTarget,
+    dragOverTarget: dragDrop.dragOverTarget,
     onDragStart: dragDrop.onDragStart,
     onDragEnd: dragDrop.onDragEnd,
-    onDragOver: dragDrop.onDragOver,
-    onDragLeave: dragDrop.onDragLeave,
     onDrop: dragDrop.onDrop,
+    setDragOver: dragDrop.setDragOver,
+    moveCard,
     calMonth: calendar.calMonth,
     calNext: calendar.calNext,
     calPrev: calendar.calPrev,

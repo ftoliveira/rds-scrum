@@ -1,10 +1,14 @@
 <script setup lang="ts">
+import { onBeforeUnmount, onMounted } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useBoardStore } from '@/stores/board';
+import { useHistoryStore } from '@/stores/history';
 import { useLabelsStore } from '@/stores/labels';
 import { usePeopleStore } from '@/stores/people';
+import { usePwaStore } from '@/stores/pwa';
 import { useUiStore } from '@/stores/ui';
 import { useWorkspaceStore } from '@/stores/workspace';
+import { useNetworkStatus } from '@/composables/useNetworkStatus';
 import SidebarWorkspace from '@/components/SidebarWorkspace.vue';
 import BoardView from '@/components/BoardView.vue';
 import ListView from '@/components/ListView.vue';
@@ -19,6 +23,9 @@ const workspace = useWorkspaceStore();
 const board = useBoardStore();
 const people = usePeopleStore();
 const labels = useLabelsStore();
+const history = useHistoryStore();
+const pwa = usePwaStore();
+const { online } = useNetworkStatus();
 
 const { drawer, view, resetConfirmOpen, clearDbConfirmOpen } = storeToRefs(ui);
 const { searchQ, filterLabel, filterAssignee, filterOverdue, deleteColDialog } = storeToRefs(board);
@@ -35,6 +42,24 @@ function toggleAssignee(id: string) {
     ? filterAssignee.value.filter((k) => k !== id)
     : [...filterAssignee.value, id];
 }
+
+function isEditableTarget(t: EventTarget | null): boolean {
+  if (!(t instanceof HTMLElement)) return false;
+  const tag = t.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+  return t.isContentEditable;
+}
+function onKeydown(e: KeyboardEvent) {
+  if (!(e.ctrlKey || e.metaKey)) return;
+  if (e.key.toLowerCase() !== 'z' && e.key.toLowerCase() !== 'y') return;
+  if (isEditableTarget(e.target)) return;
+  const isRedo = (e.key.toLowerCase() === 'z' && e.shiftKey) || e.key.toLowerCase() === 'y';
+  e.preventDefault();
+  if (isRedo) history.redo();
+  else history.undo();
+}
+onMounted(() => window.addEventListener('keydown', onKeydown));
+onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
 </script>
 
 <template>
@@ -102,6 +127,15 @@ function toggleAssignee(id: string) {
       </div>
 
       <v-spacer />
+
+      <div class="d-flex align-center" style="gap:2px; margin-right:12px;">
+        <v-btn icon="mdi-undo-variant" variant="text" size="small" density="comfortable"
+               :disabled="!history.canUndo" @click="history.undo"
+               title="Desfazer (Ctrl+Z)" />
+        <v-btn icon="mdi-redo-variant" variant="text" size="small" density="comfortable"
+               :disabled="!history.canRedo" @click="history.redo"
+               title="Refazer (Ctrl+Shift+Z)" />
+      </div>
 
       <div class="d-flex align-center" style="gap:6px; margin-right:10px;">
         <div style="font-size:12px; color:#64748B;">{{ board.sprintStats.done }} / {{ board.sprintStats.total }} concluídos</div>
@@ -228,6 +262,32 @@ function toggleAssignee(id: string) {
     <TaskFormDialog />
     <PeopleDialog />
     <LabelsDialog />
+
+    <v-snackbar :model-value="!online" :timeout="-1" location="bottom" color="warning" variant="elevated">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <v-icon size="18">mdi-cloud-off-outline</v-icon>
+        <span>Você está offline. As alterações continuam sendo salvas localmente.</span>
+      </div>
+    </v-snackbar>
+
+    <v-snackbar :model-value="pwa.offlineReady" @update:model-value="pwa.dismissOfflineReady"
+                :timeout="4000" location="bottom" color="success" variant="elevated">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <v-icon size="18">mdi-check-circle-outline</v-icon>
+        <span>App pronto para uso offline.</span>
+      </div>
+    </v-snackbar>
+
+    <v-snackbar :model-value="pwa.updateReady" :timeout="-1" location="bottom" color="primary" variant="elevated">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <v-icon size="18">mdi-update</v-icon>
+        <span>Nova versão disponível.</span>
+      </div>
+      <template #actions>
+        <v-btn variant="text" @click="pwa.applyUpdate">Atualizar</v-btn>
+        <v-btn variant="text" @click="pwa.dismissUpdate">Depois</v-btn>
+      </template>
+    </v-snackbar>
 
     <v-dialog v-model="deleteColDialog" max-width="440" persistent>
       <v-card rounded="lg">

@@ -1,7 +1,8 @@
-import { watch } from 'vue';
+import { nextTick, watch } from 'vue';
 import type { Attachment, Comment, Label, Person, Project } from '@/types';
 import { useActivityStore } from './activity';
 import { useBoardStore } from './board';
+import { useHistoryStore, type HistorySnapshot } from './history';
 import { useLabelsStore } from './labels';
 import { usePeopleStore } from './people';
 import { useWorkspaceStore } from './workspace';
@@ -25,6 +26,7 @@ export function setupPersistence() {
   const people = usePeopleStore();
   const labels = useLabelsStore();
   const activity = useActivityStore();
+  const history = useHistoryStore();
 
   // ---- Restore ----
   let saved: PersistedState | null = null;
@@ -45,29 +47,44 @@ export function setupPersistence() {
     if (saved.cardAttachments) activity.setAttachments(saved.cardAttachments);
   }
 
-  // Seed missing comments for cards that declare a count
   activity.seedFromCards(workspace.allCards());
 
-  // Reset card dialog when board switches
   watch(
     () => workspace.activeBoardId,
     () => board.clearActiveCardDialog(),
   );
 
-  // ---- Save (debounced) ----
-  let saveTimer: ReturnType<typeof setTimeout> | null = null;
-  function snapshot(): PersistedState {
+  // ---- Snapshot helpers ----
+  function snapshot(): HistorySnapshot {
     return {
-      projects: JSON.parse(JSON.stringify(workspace.projects)),
+      projects: JSON.parse(JSON.stringify(workspace.projects)) as Project[],
       expandedProjects: { ...workspace.expandedProjects },
       activeProjectId: workspace.activeProjectId,
       activeBoardId: workspace.activeBoardId,
-      PEOPLE: JSON.parse(JSON.stringify(people.PEOPLE)),
-      LABELS: JSON.parse(JSON.stringify(labels.LABELS)),
-      cardComments: JSON.parse(JSON.stringify(activity.cardComments)),
-      cardAttachments: JSON.parse(JSON.stringify(activity.cardAttachments)),
+      PEOPLE: JSON.parse(JSON.stringify(people.PEOPLE)) as Person[],
+      LABELS: JSON.parse(JSON.stringify(labels.LABELS)) as Record<string, Label>,
+      cardComments: JSON.parse(JSON.stringify(activity.cardComments)) as Record<string, Comment[]>,
+      cardAttachments: JSON.parse(JSON.stringify(activity.cardAttachments)) as Record<string, Attachment[]>,
     };
   }
+
+  function applySnapshot(s: HistorySnapshot) {
+    history.setSuspended(true);
+    workspace.setProjects(s.projects ?? []);
+    workspace.setExpanded(s.expandedProjects ?? {});
+    workspace.setActive(s.activeProjectId ?? null, s.activeBoardId ?? null);
+    people.setPeople(s.PEOPLE ?? []);
+    labels.setLabels(s.LABELS ?? {});
+    activity.setComments(s.cardComments ?? {});
+    activity.setAttachments(s.cardAttachments ?? {});
+    nextTick(() => {
+      // Wait one extra tick so the watcher's scheduled record settles.
+      setTimeout(() => history.setSuspended(false), 0);
+    });
+  }
+
+  // ---- Save (debounced) ----
+  let saveTimer: ReturnType<typeof setTimeout> | null = null;
   function save() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot()));
@@ -80,6 +97,23 @@ export function setupPersistence() {
     saveTimer = setTimeout(save, 250);
   }
 
+  // ---- History (debounced) ----
+  let histTimer: ReturnType<typeof setTimeout> | null = null;
+  function scheduleRecord() {
+    if (histTimer) clearTimeout(histTimer);
+    histTimer = setTimeout(() => history.record(snapshot()), 300);
+  }
+  function flushRecord() {
+    if (histTimer) {
+      clearTimeout(histTimer);
+      histTimer = null;
+      history.record(snapshot());
+    }
+  }
+
+  history.init(snapshot());
+  history.bind(snapshot, applySnapshot, flushRecord);
+
   watch(
     () => [
       workspace.projects,
@@ -91,7 +125,10 @@ export function setupPersistence() {
       activity.cardComments,
       activity.cardAttachments,
     ],
-    scheduleSave,
+    () => {
+      scheduleSave();
+      scheduleRecord();
+    },
     { deep: true },
   );
 }
