@@ -1,0 +1,259 @@
+<script setup lang="ts">
+import { storeToRefs } from 'pinia';
+import { useBoardStore } from '@/stores/board';
+import SidebarWorkspace from '@/components/SidebarWorkspace.vue';
+import BoardView from '@/components/BoardView.vue';
+import ListView from '@/components/ListView.vue';
+import CalendarView from '@/components/CalendarView.vue';
+import CardDialog from '@/components/dialogs/CardDialog.vue';
+import TaskFormDialog from '@/components/dialogs/TaskFormDialog.vue';
+import PeopleDialog from '@/components/dialogs/PeopleDialog.vue';
+import LabelsDialog from '@/components/dialogs/LabelsDialog.vue';
+
+const s = useBoardStore();
+const {
+  drawer, view, searchQ, filterLabel, filterAssignee, filterOverdue,
+  labelsDialogOpen, deleteColDialog, resetConfirmOpen,
+} = storeToRefs(s);
+
+function clearFilters() {
+  filterLabel.value = []; filterAssignee.value = []; searchQ.value = ''; filterOverdue.value = false;
+}
+function toggleAssignee(id: string) {
+  filterAssignee.value = filterAssignee.value.includes(id)
+    ? filterAssignee.value.filter((k) => k !== id)
+    : [...filterAssignee.value, id];
+}
+</script>
+
+<template>
+  <v-app>
+    <v-navigation-drawer v-model="drawer" :width="248" permanent color="surface" border="end">
+      <div class="pa-4 d-flex align-center" style="gap:10px;">
+        <div class="brand-mark">K</div>
+        <div>
+          <div style="font-weight:700; font-size:15px; letter-spacing:-.01em; line-height:1;">KanRDS</div>
+          <div style="font-size:11px; color:#64748B; margin-top:2px;">Engenharia · SkyLine</div>
+        </div>
+      </div>
+
+      <v-divider />
+
+      <SidebarWorkspace />
+
+      <v-divider />
+
+      <v-list density="compact" nav class="px-2 py-2">
+        <v-list-subheader class="text-caption" style="font-weight:600; letter-spacing:.08em;">CONFIGURAÇÕES</v-list-subheader>
+        <v-list-item prepend-icon="mdi-account-group-outline" title="Gerenciar equipe" @click="s.openPeopleDialog" />
+        <v-list-item prepend-icon="mdi-tag-multiple-outline" title="Gerenciar etiquetas"
+                     @click="labelsDialogOpen = true; s.resetLabelForm()" />
+        <v-list-item prepend-icon="mdi-restore" title="Restaurar dados iniciais" base-color="error"
+                     @click="resetConfirmOpen = true" />
+      </v-list>
+
+      <template #append>
+        <div class="pa-3" style="border-top:1px solid #EAEDF1;">
+          <div class="d-flex align-center" style="gap:10px;">
+            <div class="avatar-sm" style="background:#6366F1; width:32px; height:32px; font-size:13px;">VM</div>
+            <div style="line-height:1.2; flex:1;">
+              <div style="font-size:13px; font-weight:500;">Você</div>
+              <div style="font-size:11px; color:#64748B;">vm@skyline.dev</div>
+            </div>
+            <v-btn icon="mdi-cog-outline" variant="text" size="small" density="compact" />
+          </div>
+        </div>
+      </template>
+    </v-navigation-drawer>
+
+    <v-app-bar color="surface" flat height="60" border="b">
+      <template #prepend>
+        <v-app-bar-nav-icon @click="drawer = !drawer" />
+      </template>
+
+      <div class="d-flex align-center" style="gap:8px; margin-left:-4px;">
+        <span class="proj-dot" :style="{ background: s.activeProject?.color || '#94A3B8' }" style="margin-right:2px;" />
+        <div style="font-size:12px; color:#94A3B8;">{{ s.activeProject?.name || '—' }}</div>
+        <v-icon size="14" color="#CBD5E1">mdi-chevron-right</v-icon>
+        <div style="font-weight:600; font-size:15px; color:#1A202C;">{{ s.activeBoard?.name || '—' }}</div>
+        <v-chip size="x-small" variant="tonal" color="primary" style="margin-left:6px; font-weight:600;">ATIVO</v-chip>
+      </div>
+
+      <v-spacer />
+
+      <div class="d-flex align-center" style="gap:6px; margin-right:10px;">
+        <div style="font-size:12px; color:#64748B;">{{ s.sprintStats.done }} / {{ s.sprintStats.total }} concluídos</div>
+        <div class="sprint-progress"><div class="sprint-progress-bar" :style="{ width: s.sprintStats.pct + '%' }" /></div>
+        <div style="font-size:12px; color:#00695C; font-weight:600; min-width:32px;">{{ s.sprintStats.pct }}%</div>
+      </div>
+    </v-app-bar>
+
+    <v-main class="board-surface">
+      <div class="d-flex align-center px-6 py-3" style="gap:10px; background:#fff; border-bottom:1px solid #E4E7EB;">
+        <v-btn-toggle v-model="view" mandatory density="compact" divided variant="outlined"
+                      color="primary" style="height:36px;">
+          <v-btn value="board" size="small" prepend-icon="mdi-view-column-outline">Board</v-btn>
+          <v-btn value="list" size="small" prepend-icon="mdi-format-list-bulleted">Lista</v-btn>
+          <v-btn value="calendar" size="small" prepend-icon="mdi-calendar-outline">Calendário</v-btn>
+        </v-btn-toggle>
+
+        <v-divider vertical class="mx-2" />
+
+        <v-text-field v-model="searchQ" prepend-inner-icon="mdi-magnify"
+                      placeholder="Buscar por ID ou título..."
+                      density="compact" hide-details variant="outlined" single-line rounded="lg"
+                      style="max-width:280px;" />
+
+        <v-menu :close-on-content-click="false">
+          <template #activator="{ props }">
+            <button v-bind="props" :class="['filter-pill', filterLabel.length && 'active']">
+              <v-icon size="14">mdi-tag-outline</v-icon>
+              <template v-if="filterLabel.length === 0">Etiqueta</template>
+              <template v-else-if="filterLabel.length === 1">{{ s.LABELS[filterLabel[0]]?.name }}</template>
+              <template v-else>{{ s.LABELS[filterLabel[0]]?.name }} <span style="opacity:.7;">+{{ filterLabel.length - 1 }}</span></template>
+              <v-icon size="14">mdi-chevron-down</v-icon>
+            </button>
+          </template>
+          <v-list density="compact" min-width="200" select-strategy="independent">
+            <v-list-item @click="filterLabel = []" :active="filterLabel.length === 0">
+              <v-list-item-title>Todas</v-list-item-title>
+            </v-list-item>
+            <v-divider class="my-1" />
+            <v-list-item v-for="(lbl, key) in s.LABELS" :key="key"
+                         :active="filterLabel.includes(key as string)"
+                         @click="filterLabel.includes(key as string) ? filterLabel = filterLabel.filter(k => k !== key) : filterLabel.push(key as string)">
+              <template #prepend>
+                <v-checkbox-btn :model-value="filterLabel.includes(key as string)"
+                                color="primary" density="compact" style="margin-right:4px;" />
+                <span :style="{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '3px', background: lbl.fg, marginRight: '10px' }" />
+              </template>
+              <v-list-item-title>{{ lbl.name }}</v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
+
+        <v-menu :close-on-content-click="false">
+          <template #activator="{ props }">
+            <button v-bind="props" :class="['filter-pill', filterAssignee.length && 'active']">
+              <v-icon size="14">mdi-account-outline</v-icon>
+              <template v-if="filterAssignee.length === 0">Responsável</template>
+              <template v-else-if="filterAssignee.length === 1">{{ s.personById(filterAssignee[0])?.name.split(' ')[0] }}</template>
+              <template v-else>{{ s.personById(filterAssignee[0])?.name.split(' ')[0] }} <span style="opacity:.7;">+{{ filterAssignee.length - 1 }}</span></template>
+              <v-icon size="14">mdi-chevron-down</v-icon>
+            </button>
+          </template>
+          <v-list density="compact" min-width="220" select-strategy="independent">
+            <v-list-item @click="filterAssignee = []" :active="filterAssignee.length === 0">
+              <v-list-item-title>Todos</v-list-item-title>
+            </v-list-item>
+            <v-divider class="my-1" />
+            <v-list-item v-for="p in s.PEOPLE" :key="p.id"
+                         :active="filterAssignee.includes(p.id)"
+                         @click="toggleAssignee(p.id)">
+              <template #prepend>
+                <v-checkbox-btn :model-value="filterAssignee.includes(p.id)"
+                                color="primary" density="compact" style="margin-right:4px;" />
+                <span class="avatar-sm" :style="{ background: p.color, marginRight: '10px' }">{{ p.initials }}</span>
+              </template>
+              <v-list-item-title>{{ p.name }}</v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
+
+        <button :class="['filter-pill', filterOverdue && 'active']"
+                @click="filterOverdue = !filterOverdue"
+                :style="filterOverdue ? 'background:#FEF2F2; border-color:#FCA5A5; color:#B91C1C; font-weight:500;' : ''">
+          <v-icon size="14" :color="filterOverdue ? '#B91C1C' : undefined">mdi-clock-alert-outline</v-icon>
+          Atrasadas
+          <v-chip v-if="!filterOverdue" size="x-small" variant="tonal" color="error"
+                  style="margin-left:2px; font-weight:700;">
+            {{ s.overdueCount }}
+          </v-chip>
+        </button>
+
+        <button v-if="filterLabel.length || filterAssignee.length || searchQ || filterOverdue"
+                class="filter-pill" @click="clearFilters" style="color:#DC2626;">
+          <v-icon size="14">mdi-close</v-icon> Limpar filtros
+        </button>
+
+        <v-spacer />
+
+        <div class="d-flex align-center">
+          <span v-for="(p, i) in s.PEOPLE.slice(0, 5)" :key="p.id"
+                class="avatar-sm"
+                :style="{ background: p.color, marginLeft: i === 0 ? '0' : '-8px', cursor: 'pointer' }"
+                :title="p.name"
+                @click="toggleAssignee(p.id)">
+            {{ p.initials }}
+          </span>
+          <span v-if="s.PEOPLE.length > 5" class="avatar-sm"
+                style="background:#CBD5E1; color:#475569; margin-left:-8px;">
+            +{{ s.PEOPLE.length - 5 }}
+          </span>
+        </div>
+
+        <v-btn color="primary" variant="tonal" size="small" prepend-icon="mdi-playlist-plus"
+               @click="s.beginAddColumn(); view = 'board'"
+               style="margin-right:4px;" title="Adicionar nova lista ao board">Nova lista</v-btn>
+      </div>
+
+      <BoardView v-if="view === 'board'" />
+      <ListView v-else-if="view === 'list'" />
+      <CalendarView v-else-if="view === 'calendar'" />
+    </v-main>
+
+    <CardDialog />
+    <TaskFormDialog />
+    <PeopleDialog />
+    <LabelsDialog />
+
+    <v-dialog v-model="deleteColDialog" max-width="440" persistent>
+      <v-card rounded="lg">
+        <div style="padding:20px 24px 8px; display:flex; align-items:flex-start; gap:14px;">
+          <div style="width:40px; height:40px; border-radius:50%; background:#FEE2E2; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <v-icon color="error" size="22">mdi-alert-outline</v-icon>
+          </div>
+          <div>
+            <div style="font-weight:600; font-size:16px; color:#1A202C;">
+              Excluir lista "{{ s.deleteColTarget.title }}"?
+            </div>
+            <div style="font-size:13px; color:#64748B; margin-top:6px; line-height:1.5;">
+              Esta lista tem
+              <b style="color:#1A202C;">{{ s.deleteColTarget.count }} card(s)</b>.
+              Eles serão movidos automaticamente para a primeira lista disponível.
+              Esta ação não pode ser desfeita.
+            </div>
+          </div>
+        </div>
+        <div style="padding:16px 24px 20px; display:flex; gap:8px; justify-content:flex-end;">
+          <v-btn variant="text" @click="deleteColDialog = false">Cancelar</v-btn>
+          <v-btn color="error" variant="flat" prepend-icon="mdi-delete-outline" @click="s.confirmDeleteColumn">
+            Excluir lista
+          </v-btn>
+        </div>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog v-model="resetConfirmOpen" max-width="460" persistent>
+      <v-card rounded="lg">
+        <v-card-text class="pa-6">
+          <div class="d-flex align-start" style="gap:14px;">
+            <div style="width:40px; height:40px; border-radius:50%; background:#FEE2E2; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              <v-icon size="22" color="error">mdi-restore-alert</v-icon>
+            </div>
+            <div style="flex:1;">
+              <div style="font-size:16px; font-weight:600; color:#1A202C; margin-bottom:6px;">Restaurar dados iniciais?</div>
+              <div style="font-size:13px; color:#64748B; line-height:1.5;">
+                Todos os projetos, boards, tarefas, etiquetas, equipe e comentários que você adicionou serão removidos. O app voltará ao estado inicial de demonstração.
+              </div>
+            </div>
+          </div>
+        </v-card-text>
+        <v-card-actions class="pa-4 pt-0" style="justify-content:flex-end; gap:8px;">
+          <v-btn variant="text" @click="resetConfirmOpen = false">Cancelar</v-btn>
+          <v-btn color="error" variant="flat" prepend-icon="mdi-restore" @click="s.resetAllData">Restaurar</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+  </v-app>
+</template>
