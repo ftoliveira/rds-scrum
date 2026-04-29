@@ -1,15 +1,8 @@
 import type { Card, Column, Label, Person, PriorityMeta, TypeMeta } from '@/types';
+import { TODAY, addDays, iso } from '@/utils/date';
 
-const today = new Date();
-today.setHours(0, 0, 0, 0);
-
-export const TODAY = today;
-export const iso = (d: Date): string => d.toISOString().slice(0, 10);
-export const addDays = (d: Date, n: number): Date => {
-  const x = new Date(d);
-  x.setDate(x.getDate() + n);
-  return x;
-};
+const today = TODAY;
+export { TODAY, addDays, iso };
 
 export const PROJECT_COLORS = [
   '#0F766E', '#6366F1', '#EC4899', '#F59E0B', '#10B981',

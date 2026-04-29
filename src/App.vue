@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia';
 import { useBoardStore } from '@/stores/board';
+import { useLabelsStore } from '@/stores/labels';
+import { usePeopleStore } from '@/stores/people';
+import { useUiStore } from '@/stores/ui';
+import { useWorkspaceStore } from '@/stores/workspace';
 import SidebarWorkspace from '@/components/SidebarWorkspace.vue';
 import BoardView from '@/components/BoardView.vue';
 import ListView from '@/components/ListView.vue';
@@ -10,14 +14,21 @@ import TaskFormDialog from '@/components/dialogs/TaskFormDialog.vue';
 import PeopleDialog from '@/components/dialogs/PeopleDialog.vue';
 import LabelsDialog from '@/components/dialogs/LabelsDialog.vue';
 
-const s = useBoardStore();
-const {
-  drawer, view, searchQ, filterLabel, filterAssignee, filterOverdue,
-  labelsDialogOpen, deleteColDialog, resetConfirmOpen, clearDbConfirmOpen,
-} = storeToRefs(s);
+const ui = useUiStore();
+const workspace = useWorkspaceStore();
+const board = useBoardStore();
+const people = usePeopleStore();
+const labels = useLabelsStore();
+
+const { drawer, view, resetConfirmOpen, clearDbConfirmOpen } = storeToRefs(ui);
+const { searchQ, filterLabel, filterAssignee, filterOverdue, deleteColDialog } = storeToRefs(board);
+const { labelsDialogOpen } = storeToRefs(labels);
 
 function clearFilters() {
-  filterLabel.value = []; filterAssignee.value = []; searchQ.value = ''; filterOverdue.value = false;
+  filterLabel.value = [];
+  filterAssignee.value = [];
+  searchQ.value = '';
+  filterOverdue.value = false;
 }
 function toggleAssignee(id: string) {
   filterAssignee.value = filterAssignee.value.includes(id)
@@ -45,9 +56,9 @@ function toggleAssignee(id: string) {
 
       <v-list density="compact" nav class="px-2 py-2">
         <v-list-subheader class="text-caption" style="font-weight:600; letter-spacing:.08em;">CONFIGURAÇÕES</v-list-subheader>
-        <v-list-item prepend-icon="mdi-account-group-outline" title="Gerenciar equipe" @click="s.openPeopleDialog" />
+        <v-list-item prepend-icon="mdi-account-group-outline" title="Gerenciar equipe" @click="people.openPeopleDialog" />
         <v-list-item prepend-icon="mdi-tag-multiple-outline" title="Gerenciar etiquetas"
-                     @click="labelsDialogOpen = true; s.resetLabelForm()" />
+                     @click="labelsDialogOpen = true; labels.resetLabelForm()" />
         <v-list-item prepend-icon="mdi-restore" title="Restaurar dados iniciais" base-color="error"
                      @click="resetConfirmOpen = true" />
       </v-list>
@@ -83,19 +94,19 @@ function toggleAssignee(id: string) {
       </template>
 
       <div class="d-flex align-center" style="gap:8px; margin-left:-4px;">
-        <span class="proj-dot" :style="{ background: s.activeProject?.color || '#94A3B8' }" style="margin-right:2px;" />
-        <div style="font-size:12px; color:#94A3B8;">{{ s.activeProject?.name || '—' }}</div>
+        <span class="proj-dot" :style="{ background: workspace.activeProject?.color || '#94A3B8' }" style="margin-right:2px;" />
+        <div style="font-size:12px; color:#94A3B8;">{{ workspace.activeProject?.name || '—' }}</div>
         <v-icon size="14" color="#CBD5E1">mdi-chevron-right</v-icon>
-        <div style="font-weight:600; font-size:15px; color:#1A202C;">{{ s.activeBoard?.name || '—' }}</div>
+        <div style="font-weight:600; font-size:15px; color:#1A202C;">{{ workspace.activeBoard?.name || '—' }}</div>
         <v-chip size="x-small" variant="tonal" color="primary" style="margin-left:6px; font-weight:600;">ATIVO</v-chip>
       </div>
 
       <v-spacer />
 
       <div class="d-flex align-center" style="gap:6px; margin-right:10px;">
-        <div style="font-size:12px; color:#64748B;">{{ s.sprintStats.done }} / {{ s.sprintStats.total }} concluídos</div>
-        <div class="sprint-progress"><div class="sprint-progress-bar" :style="{ width: s.sprintStats.pct + '%' }" /></div>
-        <div style="font-size:12px; color:#00695C; font-weight:600; min-width:32px;">{{ s.sprintStats.pct }}%</div>
+        <div style="font-size:12px; color:#64748B;">{{ board.sprintStats.done }} / {{ board.sprintStats.total }} concluídos</div>
+        <div class="sprint-progress"><div class="sprint-progress-bar" :style="{ width: board.sprintStats.pct + '%' }" /></div>
+        <div style="font-size:12px; color:#00695C; font-weight:600; min-width:32px;">{{ board.sprintStats.pct }}%</div>
       </div>
     </v-app-bar>
 
@@ -120,8 +131,8 @@ function toggleAssignee(id: string) {
             <button v-bind="props" :class="['filter-pill', filterLabel.length && 'active']">
               <v-icon size="14">mdi-tag-outline</v-icon>
               <template v-if="filterLabel.length === 0">Etiqueta</template>
-              <template v-else-if="filterLabel.length === 1">{{ s.LABELS[filterLabel[0]]?.name }}</template>
-              <template v-else>{{ s.LABELS[filterLabel[0]]?.name }} <span style="opacity:.7;">+{{ filterLabel.length - 1 }}</span></template>
+              <template v-else-if="filterLabel.length === 1">{{ labels.LABELS[filterLabel[0]]?.name }}</template>
+              <template v-else>{{ labels.LABELS[filterLabel[0]]?.name }} <span style="opacity:.7;">+{{ filterLabel.length - 1 }}</span></template>
               <v-icon size="14">mdi-chevron-down</v-icon>
             </button>
           </template>
@@ -130,7 +141,7 @@ function toggleAssignee(id: string) {
               <v-list-item-title>Todas</v-list-item-title>
             </v-list-item>
             <v-divider class="my-1" />
-            <v-list-item v-for="(lbl, key) in s.LABELS" :key="key"
+            <v-list-item v-for="(lbl, key) in labels.LABELS" :key="key"
                          :active="filterLabel.includes(key as string)"
                          @click="filterLabel.includes(key as string) ? filterLabel = filterLabel.filter(k => k !== key) : filterLabel.push(key as string)">
               <template #prepend>
@@ -148,8 +159,8 @@ function toggleAssignee(id: string) {
             <button v-bind="props" :class="['filter-pill', filterAssignee.length && 'active']">
               <v-icon size="14">mdi-account-outline</v-icon>
               <template v-if="filterAssignee.length === 0">Responsável</template>
-              <template v-else-if="filterAssignee.length === 1">{{ s.personById(filterAssignee[0])?.name.split(' ')[0] }}</template>
-              <template v-else>{{ s.personById(filterAssignee[0])?.name.split(' ')[0] }} <span style="opacity:.7;">+{{ filterAssignee.length - 1 }}</span></template>
+              <template v-else-if="filterAssignee.length === 1">{{ people.personById(filterAssignee[0])?.name.split(' ')[0] }}</template>
+              <template v-else>{{ people.personById(filterAssignee[0])?.name.split(' ')[0] }} <span style="opacity:.7;">+{{ filterAssignee.length - 1 }}</span></template>
               <v-icon size="14">mdi-chevron-down</v-icon>
             </button>
           </template>
@@ -158,7 +169,7 @@ function toggleAssignee(id: string) {
               <v-list-item-title>Todos</v-list-item-title>
             </v-list-item>
             <v-divider class="my-1" />
-            <v-list-item v-for="p in s.PEOPLE" :key="p.id"
+            <v-list-item v-for="p in people.PEOPLE" :key="p.id"
                          :active="filterAssignee.includes(p.id)"
                          @click="toggleAssignee(p.id)">
               <template #prepend>
@@ -178,7 +189,7 @@ function toggleAssignee(id: string) {
           Atrasadas
           <v-chip v-if="!filterOverdue" size="x-small" variant="tonal" color="error"
                   style="margin-left:2px; font-weight:700;">
-            {{ s.overdueCount }}
+            {{ board.overdueCount }}
           </v-chip>
         </button>
 
@@ -190,21 +201,21 @@ function toggleAssignee(id: string) {
         <v-spacer />
 
         <div class="d-flex align-center">
-          <span v-for="(p, i) in s.PEOPLE.slice(0, 5)" :key="p.id"
+          <span v-for="(p, i) in people.PEOPLE.slice(0, 5)" :key="p.id"
                 class="avatar-sm"
                 :style="{ background: p.color, marginLeft: i === 0 ? '0' : '-8px', cursor: 'pointer' }"
                 :title="p.name"
                 @click="toggleAssignee(p.id)">
             {{ p.initials }}
           </span>
-          <span v-if="s.PEOPLE.length > 5" class="avatar-sm"
+          <span v-if="people.PEOPLE.length > 5" class="avatar-sm"
                 style="background:#CBD5E1; color:#475569; margin-left:-8px;">
-            +{{ s.PEOPLE.length - 5 }}
+            +{{ people.PEOPLE.length - 5 }}
           </span>
         </div>
 
         <v-btn color="primary" variant="tonal" size="small" prepend-icon="mdi-playlist-plus"
-               @click="s.beginAddColumn(); view = 'board'"
+               @click="board.beginAddColumn(); view = 'board'"
                style="margin-right:4px;" title="Adicionar nova lista ao board">Nova lista</v-btn>
       </div>
 
@@ -226,11 +237,11 @@ function toggleAssignee(id: string) {
           </div>
           <div>
             <div style="font-weight:600; font-size:16px; color:#1A202C;">
-              Excluir lista "{{ s.deleteColTarget.title }}"?
+              Excluir lista "{{ board.deleteColTarget.title }}"?
             </div>
             <div style="font-size:13px; color:#64748B; margin-top:6px; line-height:1.5;">
               Esta lista tem
-              <b style="color:#1A202C;">{{ s.deleteColTarget.count }} card(s)</b>.
+              <b style="color:#1A202C;">{{ board.deleteColTarget.count }} card(s)</b>.
               Eles serão movidos automaticamente para a primeira lista disponível.
               Esta ação não pode ser desfeita.
             </div>
@@ -238,7 +249,7 @@ function toggleAssignee(id: string) {
         </div>
         <div style="padding:16px 24px 20px; display:flex; gap:8px; justify-content:flex-end;">
           <v-btn variant="text" @click="deleteColDialog = false">Cancelar</v-btn>
-          <v-btn color="error" variant="flat" prepend-icon="mdi-delete-outline" @click="s.confirmDeleteColumn">
+          <v-btn color="error" variant="flat" prepend-icon="mdi-delete-outline" @click="board.confirmDeleteColumn">
             Excluir lista
           </v-btn>
         </div>
@@ -262,7 +273,7 @@ function toggleAssignee(id: string) {
         </v-card-text>
         <v-card-actions class="pa-4 pt-0" style="justify-content:flex-end; gap:8px;">
           <v-btn variant="text" @click="resetConfirmOpen = false">Cancelar</v-btn>
-          <v-btn color="error" variant="flat" prepend-icon="mdi-restore" @click="s.resetAllData">Restaurar</v-btn>
+          <v-btn color="error" variant="flat" prepend-icon="mdi-restore" @click="ui.resetAllData">Restaurar</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -283,7 +294,7 @@ function toggleAssignee(id: string) {
         </v-card-text>
         <v-card-actions class="pa-4 pt-0" style="justify-content:flex-end; gap:8px;">
           <v-btn variant="text" @click="clearDbConfirmOpen = false">Cancelar</v-btn>
-          <v-btn color="error" variant="flat" prepend-icon="mdi-delete-sweep-outline" @click="s.clearAllData">Limpar tudo</v-btn>
+          <v-btn color="error" variant="flat" prepend-icon="mdi-delete-sweep-outline" @click="ui.clearAllData">Limpar tudo</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

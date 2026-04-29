@@ -1,9 +1,15 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia';
 import { useBoardStore } from '@/stores/board';
+import { useLabelsStore } from '@/stores/labels';
 
-const s = useBoardStore();
-const { labelsDialogOpen, labelForm } = storeToRefs(s);
+const labels = useLabelsStore();
+const board = useBoardStore();
+const { labelsDialogOpen, labelForm } = storeToRefs(labels);
+
+function deleteLabel(key: string) {
+  labels.deleteLabel(key, (k) => board.dropFilterLabel(k));
+}
 </script>
 
 <template>
@@ -12,18 +18,18 @@ const { labelsDialogOpen, labelForm } = storeToRefs(s);
       <div style="padding:18px 24px 14px; border-bottom:1px solid #EAEDF1; display:flex; align-items:center; gap:10px;">
         <v-icon color="primary">mdi-tag-multiple-outline</v-icon>
         <div style="font-weight:600; font-size:16px;">Gerenciar etiquetas</div>
-        <v-chip size="x-small" variant="tonal" color="primary" style="font-weight:600;">{{ Object.keys(s.LABELS).length }} etiquetas</v-chip>
+        <v-chip size="x-small" variant="tonal" color="primary" style="font-weight:600;">{{ Object.keys(labels.LABELS).length }} etiquetas</v-chip>
         <v-spacer />
         <v-btn icon="mdi-close" variant="text" size="small" @click="labelsDialogOpen = false" />
       </div>
 
       <div style="display:grid; grid-template-columns:1fr 320px; min-height:420px;">
         <div style="padding:16px 20px; border-right:1px solid #EAEDF1; overflow-y:auto;">
-          <div class="section-label" style="margin-bottom:12px;">Etiquetas ({{ Object.keys(s.LABELS).length }})</div>
-          <div v-for="(lbl, key) in s.LABELS" :key="key"
+          <div class="section-label" style="margin-bottom:12px;">Etiquetas ({{ Object.keys(labels.LABELS).length }})</div>
+          <div v-for="(lbl, key) in labels.LABELS" :key="key"
                style="display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:10px; margin-bottom:6px; border:1px solid #EAEDF1; background:#fff; cursor:pointer;"
                :style="labelForm.origKey === key && labelForm.isEdit ? 'background:#E0F2F1; border-color:#4DB6AC;' : ''"
-               @click="s.startEditLabel(key as string)">
+               @click="labels.startEditLabel(key as string)">
             <span class="label-chip" :style="{ background: lbl.bg, color: lbl.fg, fontSize: '12px' }">{{ lbl.name }}</span>
             <div style="display:flex; gap:6px; margin-left:4px;">
               <span style="width:18px; height:18px; border-radius:50%; display:inline-block;" :style="{ background: lbl.fg }" />
@@ -31,13 +37,13 @@ const { labelsDialogOpen, labelForm } = storeToRefs(s);
             </div>
             <div style="font-size:12px; color:#64748B; flex:1;">chave: <code>{{ key }}</code></div>
             <v-chip size="x-small" variant="tonal" color="default">
-              {{ s.cards.filter(c => c.labels.includes(key as string)).length }} cards
+              {{ board.cards.filter(c => c.labels.includes(key as string)).length }} cards
             </v-chip>
             <v-btn icon="mdi-delete-outline" size="x-small" variant="text" color="error" density="comfortable"
-                   @click.stop="s.deleteLabel(key as string)" />
+                   @click.stop="deleteLabel(key as string)" />
           </div>
           <v-btn variant="tonal" color="primary" prepend-icon="mdi-plus" size="small" class="mt-3"
-                 @click="s.resetLabelForm">Nova etiqueta</v-btn>
+                 @click="labels.resetLabelForm">Nova etiqueta</v-btn>
         </div>
 
         <div style="padding:20px 20px; background:#FAFBFC;">
@@ -57,8 +63,8 @@ const { labelsDialogOpen, labelForm } = storeToRefs(s);
 
           <div class="section-label" style="margin-bottom:8px;">Cores predefinidas</div>
           <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;">
-            <button v-for="(pr, i) in s.LABEL_PRESETS" :key="i" type="button"
-                    @click="s.applyPreset(pr)"
+            <button v-for="(pr, i) in labels.LABEL_PRESETS" :key="i" type="button"
+                    @click="labels.applyPreset(pr)"
                     :style="{
                       display: 'inline-flex', alignItems: 'center', gap: '3px',
                       padding: '3px 8px', borderRadius: '6px',
@@ -87,13 +93,13 @@ const { labelsDialogOpen, labelForm } = storeToRefs(s);
             </div>
           </div>
 
-          <div v-if="s.labelFormError" style="color:#DC2626; font-size:12px; margin-bottom:8px;">{{ s.labelFormError }}</div>
+          <div v-if="labels.labelFormError" style="color:#DC2626; font-size:12px; margin-bottom:8px;">{{ labels.labelFormError }}</div>
 
-          <v-btn color="primary" variant="flat" block @click="s.saveLabel"
+          <v-btn color="primary" variant="flat" block @click="labels.saveLabel"
                  :prepend-icon="labelForm.isEdit ? 'mdi-content-save-outline' : 'mdi-plus'">
             {{ labelForm.isEdit ? 'Salvar alterações' : 'Criar etiqueta' }}
           </v-btn>
-          <v-btn v-if="labelForm.isEdit" variant="text" block class="mt-2" @click="s.resetLabelForm">Cancelar edição</v-btn>
+          <v-btn v-if="labelForm.isEdit" variant="text" block class="mt-2" @click="labels.resetLabelForm">Cancelar edição</v-btn>
         </div>
       </div>
     </v-card>

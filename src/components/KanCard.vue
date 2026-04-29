@@ -1,29 +1,36 @@
 <script setup lang="ts">
+import { useActivityStore } from '@/stores/activity';
 import { useBoardStore } from '@/stores/board';
+import { useLabelsStore } from '@/stores/labels';
+import { usePeopleStore } from '@/stores/people';
 import type { Card } from '@/types';
+import { fmtDue } from '@/utils/date';
 
 defineProps<{ card: Card }>();
-const s = useBoardStore();
+const board = useBoardStore();
+const labels = useLabelsStore();
+const people = usePeopleStore();
+const activity = useActivityStore();
 </script>
 
 <template>
   <div
     class="kan-card"
     draggable="true"
-    @dragstart="s.onDragStart($event, card.id)"
-    @dragend="s.onDragEnd($event)"
-    @click="s.openCard(card.id)"
+    @dragstart="board.onDragStart($event, card.id)"
+    @dragend="board.onDragEnd($event)"
+    @click="board.openCard(card.id)"
   >
-    <div class="priority-bar" :style="{ background: s.PRIORITY_META[card.priority].color }" />
+    <div class="priority-bar" :style="{ background: board.PRIORITY_META[card.priority].color }" />
 
     <div class="card-type-row">
-      <span class="card-type-icon" :style="{ background: s.TYPE_META[card.type].color }">
-        <v-icon size="11">{{ s.TYPE_META[card.type].icon }}</v-icon>
+      <span class="card-type-icon" :style="{ background: board.TYPE_META[card.type].color }">
+        <v-icon size="11">{{ board.TYPE_META[card.type].icon }}</v-icon>
       </span>
       <span class="card-key">{{ card.id }}</span>
       <v-spacer />
-      <v-icon size="14" :color="s.PRIORITY_META[card.priority].color">
-        {{ s.PRIORITY_META[card.priority].icon }}
+      <v-icon size="14" :color="board.PRIORITY_META[card.priority].color">
+        {{ board.PRIORITY_META[card.priority].icon }}
       </v-icon>
     </div>
 
@@ -32,8 +39,8 @@ const s = useBoardStore();
     <div v-if="card.labels.length" class="card-labels">
       <span v-for="l in card.labels" :key="l"
             class="label-chip"
-            :style="{ background: s.LABELS[l]?.bg, color: s.LABELS[l]?.fg }">
-        {{ s.LABELS[l]?.name }}
+            :style="{ background: labels.LABELS[l]?.bg, color: labels.LABELS[l]?.fg }">
+        {{ labels.LABELS[l]?.name }}
       </span>
     </div>
 
@@ -53,26 +60,26 @@ const s = useBoardStore();
 
     <div class="card-foot">
       <div class="foot-meta">
-        <span v-if="card.due" class="meta-item" :class="s.fmtDue(card.due)?.cls">
+        <span v-if="card.due" class="meta-item" :class="fmtDue(card.due)?.cls">
           <v-icon size="13">mdi-clock-outline</v-icon>
-          {{ s.fmtDue(card.due)?.lbl }}
+          {{ fmtDue(card.due)?.lbl }}
         </span>
-        <span v-if="s.commentCount(card.id)" class="meta-item">
-          <v-icon size="13">mdi-message-outline</v-icon>{{ s.commentCount(card.id) }}
+        <span v-if="activity.commentCount(card.id)" class="meta-item">
+          <v-icon size="13">mdi-message-outline</v-icon>{{ activity.commentCount(card.id) }}
         </span>
-        <span v-if="s.attachmentCount(card.id)" class="meta-item">
-          <v-icon size="13">mdi-paperclip</v-icon>{{ s.attachmentCount(card.id) }}
+        <span v-if="activity.attachmentCount(card.id)" class="meta-item">
+          <v-icon size="13">mdi-paperclip</v-icon>{{ activity.attachmentCount(card.id) }}
         </span>
       </div>
       <div style="display:flex;">
         <span v-for="(aid, i) in card.assignees" :key="aid"
               class="avatar-sm"
               :style="{
-                background: s.personById(aid)?.color,
+                background: people.personById(aid)?.color,
                 marginLeft: i === 0 ? '0' : '-8px',
               }"
-              :title="s.personById(aid)?.name">
-          {{ s.personById(aid)?.initials }}
+              :title="people.personById(aid)?.name">
+          {{ people.personById(aid)?.initials }}
         </span>
       </div>
     </div>

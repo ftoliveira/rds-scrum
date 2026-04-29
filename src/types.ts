@@ -13,6 +13,7 @@ export interface Card {
   col: string;
   type: CardType;
   title: string;
+  description?: string;
   labels: string[];
   assignees: string[];
   due: string | null;
@@ -20,6 +21,8 @@ export interface Card {
   comments: number;
   attachments: number;
   checklist?: ChecklistItem[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Column {

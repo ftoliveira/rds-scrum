@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia';
 import { useBoardStore } from '@/stores/board';
+import { usePeopleStore } from '@/stores/people';
 
-const s = useBoardStore();
-const { peopleDialogOpen, personForm } = storeToRefs(s);
+const people = usePeopleStore();
+const board = useBoardStore();
+const { peopleDialogOpen, personForm } = storeToRefs(people);
 </script>
 
 <template>
@@ -12,31 +14,31 @@ const { peopleDialogOpen, personForm } = storeToRefs(s);
       <div style="padding:18px 24px 14px; border-bottom:1px solid #EAEDF1; display:flex; align-items:center; gap:10px;">
         <v-icon color="primary">mdi-account-group-outline</v-icon>
         <div style="font-weight:600; font-size:16px;">Gerenciar equipe</div>
-        <v-chip size="x-small" variant="tonal" color="primary" style="font-weight:600;">{{ s.PEOPLE.length }} pessoas</v-chip>
+        <v-chip size="x-small" variant="tonal" color="primary" style="font-weight:600;">{{ people.PEOPLE.length }} pessoas</v-chip>
         <v-spacer />
         <v-btn icon="mdi-close" variant="text" size="small" @click="peopleDialogOpen = false" />
       </div>
 
       <div style="display:grid; grid-template-columns:1fr 320px; min-height:460px;">
         <div style="padding:16px 20px; border-right:1px solid #EAEDF1; overflow-y:auto;">
-          <div class="section-label" style="margin-bottom:12px;">Membros ({{ s.PEOPLE.length }})</div>
-          <div v-for="p in s.PEOPLE" :key="p.id"
+          <div class="section-label" style="margin-bottom:12px;">Membros ({{ people.PEOPLE.length }})</div>
+          <div v-for="p in people.PEOPLE" :key="p.id"
                style="display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:10px; margin-bottom:6px; border:1px solid #EAEDF1; background:#fff; cursor:pointer; transition: background .12s;"
                :style="personForm.id === p.id ? 'background:#E0F2F1; border-color:#4DB6AC;' : ''"
-               @click="s.startEditPerson(p)">
+               @click="people.startEditPerson(p)">
             <span class="avatar-sm" :style="{ background: p.color, width: '36px', height: '36px', fontSize: '13px', flexShrink: 0 }">{{ p.initials }}</span>
             <div style="flex:1; min-width:0;">
               <div style="font-weight:500; font-size:14px;">{{ p.name }}</div>
               <div style="font-size:12px; color:#64748B;">{{ p.role || 'Sem cargo' }} · {{ p.email || 'Sem e-mail' }}</div>
             </div>
             <v-chip size="x-small" variant="tonal" color="default">
-              {{ s.cards.filter(c => c.assignees.includes(p.id)).length }} tasks
+              {{ board.cards.filter(c => c.assignees.includes(p.id)).length }} tasks
             </v-chip>
             <v-btn icon="mdi-delete-outline" size="x-small" variant="text" color="error" density="comfortable"
-                   @click.stop="s.deletePerson(p.id)" />
+                   @click.stop="people.deletePerson(p.id)" />
           </div>
           <v-btn variant="tonal" color="primary" prepend-icon="mdi-plus" size="small" class="mt-3"
-                 @click="s.resetPersonForm">Nova pessoa</v-btn>
+                 @click="people.resetPersonForm">Nova pessoa</v-btn>
         </div>
 
         <div style="padding:20px 20px; background:#FAFBFC;">
@@ -50,7 +52,7 @@ const { peopleDialogOpen, personForm } = storeToRefs(s);
 
           <div class="section-label" style="margin-bottom:8px;">Cor do avatar</div>
           <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px;">
-            <button v-for="c in s.AVATAR_COLORS" :key="c" type="button"
+            <button v-for="c in people.AVATAR_COLORS" :key="c" type="button"
                     :style="{
                       width: '24px', height: '24px', borderRadius: '50%',
                       background: c,
@@ -71,13 +73,13 @@ const { peopleDialogOpen, personForm } = storeToRefs(s);
           <v-text-field v-model="personForm.email" label="E-mail" variant="outlined" density="compact"
                         hide-details class="mb-3" rounded="lg" placeholder="ana@empresa.com" />
 
-          <div v-if="s.personFormError" style="color:#DC2626; font-size:12px; margin-bottom:8px;">{{ s.personFormError }}</div>
+          <div v-if="people.personFormError" style="color:#DC2626; font-size:12px; margin-bottom:8px;">{{ people.personFormError }}</div>
 
-          <v-btn color="primary" variant="flat" block @click="s.savePerson"
+          <v-btn color="primary" variant="flat" block @click="people.savePerson"
                  :prepend-icon="personForm.id ? 'mdi-content-save-outline' : 'mdi-plus'">
             {{ personForm.id ? 'Salvar alterações' : 'Adicionar membro' }}
           </v-btn>
-          <v-btn v-if="personForm.id" variant="text" block class="mt-2" @click="s.resetPersonForm">Cancelar edição</v-btn>
+          <v-btn v-if="personForm.id" variant="text" block class="mt-2" @click="people.resetPersonForm">Cancelar edição</v-btn>
         </div>
       </div>
     </v-card>
