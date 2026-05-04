@@ -82,10 +82,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
       <v-list density="compact" nav class="px-2 py-2">
         <v-list-subheader class="text-caption" style="font-weight:600; letter-spacing:.08em;">CONFIGURAÇÕES</v-list-subheader>
         <v-list-item prepend-icon="mdi-account-group-outline" title="Gerenciar equipe" @click="people.openPeopleDialog" />
-        <v-list-item prepend-icon="mdi-tag-multiple-outline" title="Gerenciar etiquetas"
-                     @click="labelsDialogOpen = true; labels.resetLabelForm()" />
-        <v-list-item prepend-icon="mdi-restore" title="Restaurar dados iniciais" base-color="error"
-                     @click="resetConfirmOpen = true" />
+        <v-list-item prepend-icon="mdi-tag-multiple-outline" title="Gerenciar etiquetas" @click="labelsDialogOpen = true; labels.resetLabelForm()" />
       </v-list>
 
       <template #append>

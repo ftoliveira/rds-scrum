@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { nextTick, ref } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useActivityStore } from '@/stores/activity';
 import { useBoardStore } from '@/stores/board';
@@ -18,8 +18,24 @@ const workspace = useWorkspaceStore();
 const { dialogCardId } = storeToRefs(board);
 const { newCommentText } = storeToRefs(activity);
 const attachmentInput = ref<HTMLInputElement | null>(null);
+const newCheckItemText = ref('');
+const showNewCheckItem = ref(false);
+const newCheckItemInput = ref<{ focus: () => void } | null>(null);
 
 function onModelUpdate(v: boolean) { if (!v) board.closeCard(); }
+function openAddCheckItem() {
+  showNewCheckItem.value = true;
+  nextTick(() => newCheckItemInput.value?.focus());
+}
+function confirmAddCheckItem() {
+  if (board.currentCard) board.addCardChecklistItem(board.currentCard, newCheckItemText.value);
+  newCheckItemText.value = '';
+  showNewCheckItem.value = false;
+}
+function cancelAddCheckItem() {
+  newCheckItemText.value = '';
+  showNewCheckItem.value = false;
+}
 function setPriority(key: string) {
   if (board.currentCard) board.currentCard.priority = key as Priority;
 }
@@ -86,7 +102,16 @@ function setPriority(key: string) {
                               @update:model-value="board.toggleCheck(board.currentCard!, i)" />
               <span class="c-label">{{ ci.t }}</span>
             </div>
-            <v-btn variant="text" size="small" prepend-icon="mdi-plus" color="primary" class="mt-2" style="padding-left:0;">
+            <div v-if="showNewCheckItem" style="display:flex; gap:6px; align-items:center; margin-top:6px;">
+              <v-text-field ref="newCheckItemInput" v-model="newCheckItemText" autofocus density="compact" variant="outlined"
+                            hide-details rounded="lg" placeholder="Novo item..."
+                            @keydown.enter.prevent="confirmAddCheckItem"
+                            @keydown.esc.prevent="cancelAddCheckItem" />
+              <v-btn size="small" color="primary" variant="flat" icon="mdi-check" @click="confirmAddCheckItem" />
+              <v-btn size="small" variant="text" icon="mdi-close" @click="cancelAddCheckItem" />
+            </div>
+            <v-btn v-else variant="text" size="small" prepend-icon="mdi-plus" color="primary" class="mt-2"
+                   style="padding-left:0;" @click="openAddCheckItem">
               Adicionar item
             </v-btn>
           </div>

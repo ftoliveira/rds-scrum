@@ -223,6 +223,12 @@ export const useBoardStore = defineStore('board', () => {
     newTask.newChecklistItem = '';
   }
   function removeChecklistItem(i: number) { newTask.checklist.splice(i, 1); }
+  function addCardChecklistItem(card: Card, text: string) {
+    const t = text.trim();
+    if (!t) return;
+    if (!card.checklist) card.checklist = [];
+    card.checklist.push({ t, d: false });
+  }
   function toggleArrayVal(arr: string[], v: string) {
     const i = arr.indexOf(v);
     if (i === -1) arr.push(v); else arr.splice(i, 1);
@@ -377,7 +383,7 @@ export const useBoardStore = defineStore('board', () => {
     toggleCheck,
     newTaskOpen, newTaskEditId, newTask,
     openNewTask, openEditTask, commitNewTask, deleteCard,
-    addChecklistItem, removeChecklistItem, toggleArrayVal,
+    addChecklistItem, removeChecklistItem, addCardChecklistItem, toggleArrayVal,
     addingColumn, newColumnTitle, newColumnColor,
     beginAddColumn, commitAddColumn, cancelAddColumn,
     editingCol, editingColTitle, startRenameColumn, commitRenameColumn,
