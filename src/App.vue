@@ -69,7 +69,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
         <div class="brand-mark">K</div>
         <div>
           <div style="font-weight:700; font-size:15px; letter-spacing:-.01em; line-height:1;">KanRDS</div>
-          <div style="font-size:11px; color:#64748B; margin-top:2px;">Engenharia · SkyLine</div>
+          <div style="font-size:11px; color:#64748B; margin-top:2px;">Engenharia · NIPCAD</div>
         </div>
       </div>
 
