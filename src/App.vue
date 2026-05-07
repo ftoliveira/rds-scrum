@@ -275,6 +275,14 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
       </div>
     </v-snackbar>
 
+    <v-snackbar :model-value="pwa.updateApplied" @update:model-value="pwa.dismissUpdateApplied"
+                :timeout="5000" location="bottom" color="success" variant="elevated">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <v-icon size="18">mdi-check-circle-outline</v-icon>
+        <span>Programa atualizado para a versão mais recente.</span>
+      </div>
+    </v-snackbar>
+
     <v-snackbar :model-value="pwa.updateReady" :timeout="-1" location="bottom" color="primary" variant="elevated">
       <div style="display:flex; align-items:center; gap:8px;">
         <v-icon size="18">mdi-update</v-icon>

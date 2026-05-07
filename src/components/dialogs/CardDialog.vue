@@ -21,6 +21,23 @@ const attachmentInput = ref<HTMLInputElement | null>(null);
 const newCheckItemText = ref('');
 const showNewCheckItem = ref(false);
 const newCheckItemInput = ref<{ focus: () => void } | null>(null);
+const editingCommentId = ref<string | null>(null);
+const editingCommentText = ref('');
+
+function startEditComment(commentId: string, text: string) {
+  editingCommentId.value = commentId;
+  editingCommentText.value = text;
+}
+function confirmEditComment() {
+  if (board.currentCard && editingCommentId.value) {
+    activity.editComment(board.currentCard.id, editingCommentId.value, editingCommentText.value);
+  }
+  cancelEditComment();
+}
+function cancelEditComment() {
+  editingCommentId.value = null;
+  editingCommentText.value = '';
+}
 
 function onModelUpdate(v: boolean) { if (!v) board.closeCard(); }
 function openAddCheckItem() {
@@ -198,11 +215,26 @@ function setPriority(key: string) {
                 <b style="font-size:13px;">{{ cm.author }}</b>
                 <span style="color:#94A3B8; font-size:12px;">· {{ cm.time }}</span>
                 <v-spacer />
-                <v-btn icon="mdi-delete-outline" size="x-small" variant="text" color="error" density="comfortable"
+                <v-btn v-if="editingCommentId !== cm.id"
+                       icon="mdi-pencil-outline" size="x-small" variant="text" density="comfortable"
+                       style="opacity:.5;" @click="startEditComment(cm.id, cm.text)"
+                       title="Editar comentário" />
+                <v-btn v-if="editingCommentId !== cm.id"
+                       icon="mdi-delete-outline" size="x-small" variant="text" color="error" density="comfortable"
                        style="opacity:.5;" @click="activity.removeComment(board.currentCard!.id, cm.id)"
                        title="Remover comentário" />
               </div>
-              <div style="font-size:13px; color:#334155; line-height:1.5;">{{ cm.text }}</div>
+              <div v-if="editingCommentId === cm.id">
+                <v-textarea v-model="editingCommentText"
+                            density="compact" rows="2" variant="outlined" hide-details auto-grow rounded="lg"
+                            @keydown.ctrl.enter.prevent="confirmEditComment"
+                            @keydown.esc.prevent="cancelEditComment" />
+                <div style="display:flex; gap:6px; margin-top:6px;">
+                  <v-btn size="x-small" color="primary" variant="flat" @click="confirmEditComment" prepend-icon="mdi-check">Salvar</v-btn>
+                  <v-btn size="x-small" variant="text" @click="cancelEditComment">Cancelar</v-btn>
+                </div>
+              </div>
+              <div v-else style="font-size:13px; color:#334155; line-height:1.5; white-space:pre-wrap;">{{ cm.text }}</div>
             </div>
           </div>
 

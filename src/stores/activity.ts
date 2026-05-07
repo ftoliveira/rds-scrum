@@ -59,6 +59,18 @@ export const useActivityStore = defineStore('activity', () => {
     newCommentText.value = '';
   }
 
+  function editComment(cardId: string, commentId: string, text: string) {
+    const t = text.trim();
+    if (!t) return;
+    const list = cardComments[cardId];
+    if (!list) return;
+    const cm = list.find((x) => x.id === commentId);
+    if (!cm) return;
+    if (cm.text === t) return;
+    cm.text = t;
+    cm.time = 'editado agora';
+  }
+
   function removeComment(cardId: string, commentId: string) {
     if (!cardComments[cardId]) return;
     cardComments[cardId] = cardComments[cardId].filter((x) => x.id !== commentId);
@@ -143,7 +155,7 @@ export const useActivityStore = defineStore('activity', () => {
 
   return {
     cardComments, newCommentText,
-    setComments, seedFromCards, commentCount, saveComment, removeComment,
+    setComments, seedFromCards, commentCount, saveComment, editComment, removeComment,
     cardAttachments, attachmentError, attachmentDragOver,
     setAttachments, attachmentCount,
     addAttachmentFiles, removeAttachment,
