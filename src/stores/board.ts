@@ -193,6 +193,29 @@ export const useBoardStore = defineStore('board', () => {
     if (colId) newTask.col = colId;
     newTaskOpen.value = true;
   }
+  function duplicateCard(id: string) {
+    const board = workspace.activeBoard;
+    if (!board) return;
+    const i = board.cards.findIndex((c) => c.id === id);
+    if (i === -1) return;
+    const src = board.cards[i];
+    const now = new Date().toISOString();
+    const copy: Card = {
+      ...src,
+      id: workspace.nextCardId(),
+      title: src.title + ' (cópia)',
+      labels: [...src.labels],
+      assignees: [...src.assignees],
+      checklist: src.checklist ? src.checklist.map((c) => ({ t: c.t, d: c.d })) : undefined,
+      comments: 0,
+      attachments: 0,
+      createdAt: now,
+      updatedAt: now,
+    };
+    if (!copy.checklist) delete copy.checklist;
+    board.cards.splice(i + 1, 0, copy);
+    dialogCardId.value = copy.id;
+  }
   function deleteCard(id: string) {
     const board = workspace.activeBoard;
     if (!board) return;
@@ -382,7 +405,7 @@ export const useBoardStore = defineStore('board', () => {
     monthLabel: calendar.monthLabel,
     toggleCheck,
     newTaskOpen, newTaskEditId, newTask,
-    openNewTask, openEditTask, commitNewTask, deleteCard,
+    openNewTask, openEditTask, commitNewTask, deleteCard, duplicateCard,
     addChecklistItem, removeChecklistItem, addCardChecklistItem, toggleArrayVal,
     addingColumn, newColumnTitle, newColumnColor,
     beginAddColumn, commitAddColumn, cancelAddColumn,

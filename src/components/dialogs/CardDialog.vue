@@ -77,7 +77,7 @@ function setPriority(key: string) {
           </template>
           <v-list density="compact" min-width="180">
             <v-list-item prepend-icon="mdi-pencil-outline" title="Editar tarefa" @click="board.openEditTask(board.currentCard!)" />
-            <v-list-item prepend-icon="mdi-content-copy" title="Duplicar" />
+            <v-list-item prepend-icon="mdi-content-copy" title="Duplicar" @click="board.duplicateCard(board.currentCard!.id)" />
             <v-list-item prepend-icon="mdi-link-variant" title="Copiar link" />
             <v-divider class="my-1" />
             <v-list-item prepend-icon="mdi-delete-outline" title="Excluir" base-color="error"
